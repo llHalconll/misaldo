@@ -45,8 +45,7 @@ export async function handler(event, context) {
     if (!mejor) {
       return { statusCode: 404, body: "Sin ofertas disponibles" };
     }
-    // ✅ Sumar 100 COP al precio base
-    const precioAjustado = mejor.price + 100;
+    
     // Solo devolver el número puro
     return {
       statusCode: 200,
@@ -54,7 +53,7 @@ export async function handler(event, context) {
         "Content-Type": "text/plain",
         "Access-Control-Allow-Origin": "*",
       },
-      body: precioAjustado.toString(),
+      body: mejor.price.toString(),
     };
   } catch (err) {
     return {
@@ -64,6 +63,7 @@ export async function handler(event, context) {
     };
   }
 }
+
 
 
 
