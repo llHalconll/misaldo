@@ -41,7 +41,7 @@ export async function handler(event, context) {
       .filter(o => o.max >= 15 && o.min <= 100)
       .sort((a, b) => a.price - b.price);
 
-    const mejor = ofertas[1] ?? ofertas[0];
+    const mejor = ofertas[1] ?? ofertas[2];
     if (!mejor) {
       return { statusCode: 404, body: "Sin ofertas disponibles" };
     }
