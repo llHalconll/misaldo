@@ -31,7 +31,7 @@ export async function handler(event, context) {
 
     const data = await resp.json();
 
-    // Filtrar ofertas válidas (al menos 15 USDT)
+    // Filtrar ofertas válidas
     const ofertas = (data.data || [])
       .map(o => ({
         price: parseFloat(o.adv.price),
@@ -41,19 +41,22 @@ export async function handler(event, context) {
       .filter(o => o.max >= 15 && o.min <= 100)
       .sort((a, b) => a.price - b.price);
 
-    const mejor = ofertas[1] ?? ofertas[2];
+    const mejor = ofertas[1] ?? ofertas[0];
     if (!mejor) {
       return { statusCode: 404, body: "Sin ofertas disponibles" };
     }
-    
-    // Solo devolver el número puro
+
+    // ✅ Sumar 100 COP a la tasa
+    const precioAjustado = mejor.price + 100;
+
+    // Devolver la tasa ajustada como número puro
     return {
       statusCode: 200,
       headers: {
         "Content-Type": "text/plain",
         "Access-Control-Allow-Origin": "*",
       },
-      body: mejor.price.toString(),
+      body: precioAjustado.toFixed(2), // dos decimales
     };
   } catch (err) {
     return {
@@ -63,7 +66,3 @@ export async function handler(event, context) {
     };
   }
 }
-
-
-
-
