@@ -1,8 +1,2 @@
 [build]
-  functions = "netlify/functions"
-  publish = "."
-
-[[redirects]]
-  from = "/*"
-  to = "/.netlify/functions/binance"
-  status = 200
+  functions = "functions"
