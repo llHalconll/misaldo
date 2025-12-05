@@ -1,5 +1,6 @@
 // funciones/binance-rate.js
-export async function handler(event) {
+export async function handler(event, context) {
+  // Solo permitir método GET
   if (event.httpMethod !== "GET") {
     return {
       statusCode: 405,
@@ -13,58 +14,46 @@ export async function handler(event) {
       fiat: "VES",
       tradeType: "BUY",
       page: 1,
-      rows: 30,
+      rows: 20,
       payTypes: ["SpecificBank"],
     };
 
-    const resp = await fetch(
-      "https://p2p.binance.com/bapi/c2c/v2/friendly/c2c/adv/search",
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      }
-    );
+    // Llamar a Binance
+    const resp = await fetch("https://p2p.binance.com/bapi/c2c/v2/friendly/c2c/adv/search", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
 
     if (!resp.ok) {
-      return {
-        statusCode: resp.status,
-        body: "Error al obtener datos de Binance",
-      };
+      return { statusCode: resp.status, body: "Error al obtener datos de Binance" };
     }
 
     const data = await resp.json();
 
-    const ofertas = data.data
-      ?.map((o) => ({
-        price: Number(o.adv.price),
-        min: Number(o.adv.minSingleTransQuantity),
-        max: Number(o.adv.maxSingleTransQuantity),
+    // Filtrar ofertas válidas (al menos 15 USDT)
+    const ofertas = (data.data || [])
+      .map(o => ({
+        price: parseFloat(o.adv.price),
+        min: parseFloat(o.adv.minSingleTransQuantity),
+        max: parseFloat(o.adv.maxSingleTransQuantity),
       }))
-      // 👉 mínimo 15, máximo 50
-      .filter((o) => o.min <= 50 && o.max >= 15)
+      .filter(o => o.max >= 15 && o.min <= 100)
       .sort((a, b) => a.price - b.price);
 
-    if (!ofertas || ofertas.length === 0) {
-      return {
-        statusCode: 404,
-        body: "Sin ofertas disponibles",
-      };
+    const mejor = ofertas[1] ?? ofertas[2];
+    if (!mejor) {
+      return { statusCode: 404, body: "Sin ofertas disponibles" };
     }
 
-    // 👉 tercer vendedor (o segundo, o primero)
-    const elegido = ofertas[2] ?? ofertas[1] ?? ofertas[0];
-
-    // 👉 sumar +2
-    const precioFinal = elegido.price + 2;
-
+    // Solo devolver el número puro
     return {
       statusCode: 200,
       headers: {
         "Content-Type": "text/plain",
         "Access-Control-Allow-Origin": "*",
       },
-      body: precioFinal.toString(),
+      body: mejor.price.toString(),
     };
   } catch (err) {
     return {
@@ -73,4 +62,3 @@ export async function handler(event) {
       body: "Error interno: " + err.message,
     };
   }
-}
