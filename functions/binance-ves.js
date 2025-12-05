@@ -45,7 +45,7 @@ export async function handler(event, context) {
     }
 
     // --- suma +2 puntos a la tasa ---
-    const precioFinal = vendedor.price + 2;
+    const precioFinal = vendedor.price + 3;
 
     return {
       statusCode: 200,
