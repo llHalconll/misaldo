@@ -11,6 +11,7 @@ export async function handler(event, context) {
       tradeType: "BUY",
       page: 1,
       rows: 20,
+      payTypes: ["BankTransfer"]   // AHORA: solo Transferencia Bancaria
     };
 
     const resp = await fetch(
@@ -28,23 +29,24 @@ export async function handler(event, context) {
 
     const data = await resp.json();
 
+    // FILTRO CORRECTO EN USDT (no VES)
     const ofertas = (data.data || [])
       .map(o => ({
         price: parseFloat(o.adv.price),
-        min: parseFloat(o.adv.minSingleTransQuantity),
-        max: parseFloat(o.adv.maxSingleTransQuantity),
+        min: parseFloat(o.adv.minSingleTransAmount),   // USDT mínimo
+        max: parseFloat(o.adv.maxSingleTransAmount),   // USDT máximo
       }))
-      .filter(o => o.max >= 15 && o.min <= 100)   // puedes ajustar este rango
-      .sort((a, b) => a.price - b.price);
+      .filter(o => o.max >= 15 && o.min <= 100)         // Filtro USDT 15–100
+      .sort((a, b) => a.price - b.price);               // Ordenar menor precio primero
 
-    // --- toma 3ro; si no existe, 2do; si no existe, 1ro ---
+    // SELECCIÓN DEL VENDEDOR: 3 → 2 → 1
     const vendedor = ofertas[2] ?? ofertas[1] ?? ofertas[0];
 
     if (!vendedor) {
       return { statusCode: 404, body: "Sin ofertas disponibles" };
     }
 
-    // --- suma +2 puntos a la tasa ---
+    // SUMAR +3 PUNTOS A LA TASA OBTENIDA
     const precioFinal = vendedor.price + 3;
 
     return {
