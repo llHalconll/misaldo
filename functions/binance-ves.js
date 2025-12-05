@@ -11,7 +11,7 @@ export async function handler(event, context) {
       tradeType: "BUY",
       page: 1,
       rows: 20,
-      payTypes: ["BankTransfer"]   // AHORA: solo Transferencia Bancaria
+      payTypes: ["Transferencia Bancaria"]   // AHORA: solo Transferencia Bancaria
     };
 
     const resp = await fetch(
