@@ -1,6 +1,6 @@
 // funciones/binance-rate.js
 export async function handler(event, context) {
-  // Solo permitir método GET
+
   if (event.httpMethod !== "GET") {
     return {
       statusCode: 405,
@@ -11,27 +11,31 @@ export async function handler(event, context) {
   try {
     const body = {
       asset: "USDT",
-      fiat: "COP",
+      fiat: "VES",
       tradeType: "BUY",
       page: 1,
       rows: 20,
-      payTypes: ["Nequi"],
+      payTypes: ["Transferencia Bancaria"], // 👈 FILTRO EXACTO
     };
 
-    // Llamar a Binance
-    const resp = await fetch("https://p2p.binance.com/bapi/c2c/v2/friendly/c2c/adv/search", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
+    const resp = await fetch(
+      "https://p2p.binance.com/bapi/c2c/v2/friendly/c2c/adv/search",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      }
+    );
 
     if (!resp.ok) {
-      return { statusCode: resp.status, body: "Error al obtener datos de Binance" };
+      return {
+        statusCode: resp.status,
+        body: "Error al obtener datos de Binance",
+      };
     }
 
     const data = await resp.json();
 
-    // Filtrar ofertas válidas
     const ofertas = (data.data || [])
       .map(o => ({
         price: parseFloat(o.adv.price),
@@ -43,25 +47,27 @@ export async function handler(event, context) {
 
     const mejor = ofertas[1] ?? ofertas[0];
     if (!mejor) {
-      return { statusCode: 404, body: "Sin ofertas disponibles" };
+      return {
+        statusCode: 404,
+        body: "Sin ofertas disponibles",
+      };
     }
 
-    // ✅ Sumar 100 COP a la tasa
-    const precioAjustado = mejor.price + 100;
+    // 👀 SUMA +2 AL PRECIO
+    const precioAjustado = mejor.price + 2;
 
-    // Devolver la tasa ajustada como número puro
     return {
       statusCode: 200,
       headers: {
         "Content-Type": "text/plain",
         "Access-Control-Allow-Origin": "*",
       },
-      body: precioAjustado.toFixed(2), // dos decimales
+      body: precioAjustado.toFixed(2),
     };
+
   } catch (err) {
     return {
       statusCode: 500,
-      headers: { "Content-Type": "text/plain" },
       body: "Error interno: " + err.message,
     };
   }
