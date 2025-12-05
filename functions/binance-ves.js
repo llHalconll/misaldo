@@ -1,4 +1,3 @@
-// funciones/binance-rate.js
 export async function handler(event, context) {
   if (event.httpMethod !== "GET") {
     return { statusCode: 405, body: "Método no permitido" };
@@ -10,8 +9,7 @@ export async function handler(event, context) {
       fiat: "VES",
       tradeType: "BUY",
       page: 1,
-      rows: 20,
-      payTypes: ["Transferencia Bancaria"]   // AHORA: solo Transferencia Bancaria
+      rows: 5 // solo primeras 5 ofertas
     };
 
     const resp = await fetch(
@@ -29,33 +27,22 @@ export async function handler(event, context) {
 
     const data = await resp.json();
 
-    // FILTRO CORRECTO EN USDT (no VES)
-    const ofertas = (data.data || [])
-      .map(o => ({
-        price: parseFloat(o.adv.price),
-        min: parseFloat(o.adv.minSingleTransAmount),   // USDT mínimo
-        max: parseFloat(o.adv.maxSingleTransAmount),   // USDT máximo
-      }))
-      .filter(o => o.max >= 15 && o.min <= 100)         // Filtro USDT 15–100
-      .sort((a, b) => a.price - b.price);               // Ordenar menor precio primero
-
-    // SELECCIÓN DEL VENDEDOR: 3 → 2 → 1
-    const vendedor = ofertas[2] ?? ofertas[1] ?? ofertas[0];
-
-    if (!vendedor) {
-      return { statusCode: 404, body: "Sin ofertas disponibles" };
-    }
-
-    // SUMAR +3 PUNTOS A LA TASA OBTENIDA
-    const precioFinal = vendedor.price + 3;
+    // Tomar solo las primeras 5 ofertas
+    const ofertas = (data.data || []).slice(0, 5).map(o => ({
+      price: o.adv.price,
+      min: o.adv.minSingleTransQuantity,
+      max: o.adv.maxSingleTransQuantity,
+      payTypes: o.adv.tradeMethods.map(m => m.payType), // 🔥 aquí salen los métodos reales
+      payNames: o.adv.tradeMethods.map(m => m.tradeMethodName) // nombre visible
+    }));
 
     return {
       statusCode: 200,
       headers: {
-        "Content-Type": "text/plain",
+        "Content-Type": "application/json",
         "Access-Control-Allow-Origin": "*",
       },
-      body: precioFinal.toFixed(2),
+      body: JSON.stringify(ofertas, null, 2),
     };
 
   } catch (err) {
@@ -65,3 +52,4 @@ export async function handler(event, context) {
     };
   }
 }
+
