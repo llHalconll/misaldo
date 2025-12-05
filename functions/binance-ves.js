@@ -1,5 +1,5 @@
 // funciones/binance-rate.js
-export async function handler(event, context) {
+export async function handler(event) {
   if (event.httpMethod !== "GET") {
     return {
       statusCode: 405,
@@ -13,7 +13,7 @@ export async function handler(event, context) {
       fiat: "VES",
       tradeType: "BUY",
       page: 1,
-      rows: 20,
+      rows: 30,
       payTypes: ["SpecificBank"],
     };
 
@@ -35,34 +35,36 @@ export async function handler(event, context) {
 
     const data = await resp.json();
 
-    // 👉 Filtrar SOLO vendedores donde max <= 20 USDT
-    const ofertas = (data.data || [])
-      .map((o) => ({
-        price: parseFloat(o.adv.price),
-        min: parseFloat(o.adv.minSingleTransQuantity),
-        max: parseFloat(o.adv.maxSingleTransQuantity),
+    const ofertas = data.data
+      ?.map((o) => ({
+        price: Number(o.adv.price),
+        min: Number(o.adv.minSingleTransQuantity),
+        max: Number(o.adv.maxSingleTransQuantity),
       }))
-      .filter((o) => o.max <= 20)
+      // 👉 mínimo 15, máximo 50
+      .filter((o) => o.min <= 50 && o.max >= 15)
       .sort((a, b) => a.price - b.price);
 
-    // 👉 Seleccionar TERCER vendedor (o segundo, o primero)
-    const mejor = ofertas[2] ?? ofertas[1] ?? ofertas[0];
-
-    if (!mejor) {
+    if (!ofertas || ofertas.length === 0) {
       return {
         statusCode: 404,
         body: "Sin ofertas disponibles",
       };
     }
 
-    // 👉 Devolver solo el precio crudo
+    // 👉 tercer vendedor (o segundo, o primero)
+    const elegido = ofertas[2] ?? ofertas[1] ?? ofertas[0];
+
+    // 👉 sumar +2
+    const precioFinal = elegido.price + 2;
+
     return {
       statusCode: 200,
       headers: {
         "Content-Type": "text/plain",
         "Access-Control-Allow-Origin": "*",
       },
-      body: mejor.price.toString(),
+      body: precioFinal.toString(),
     };
   } catch (err) {
     return {
