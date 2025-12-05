@@ -17,33 +17,45 @@ export async function handler(event, context) {
       payTypes: ["SpecificBank"],
     };
 
-    const resp = await fetch("https://p2p.binance.com/bapi/c2c/v2/friendly/c2c/adv/search", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
+    const resp = await fetch(
+      "https://p2p.binance.com/bapi/c2c/v2/friendly/c2c/adv/search",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      }
+    );
 
     if (!resp.ok) {
-      return { statusCode: resp.status, body: "Error al obtener datos de Binance" };
+      return {
+        statusCode: resp.status,
+        body: "Error al obtener datos de Binance",
+      };
     }
 
     const data = await resp.json();
 
-    // 👉 Cambiado: solo ofertas donde max <= 20 USDT
+    // 👉 Filtrar SOLO vendedores donde max <= 20 USDT
     const ofertas = (data.data || [])
-      .map(o => ({
+      .map((o) => ({
         price: parseFloat(o.adv.price),
         min: parseFloat(o.adv.minSingleTransQuantity),
         max: parseFloat(o.adv.maxSingleTransQuantity),
       }))
-      .filter(o => o.max <= 20)       // 👈 NUEVA REGLA
+      .filter((o) => o.max <= 20)
       .sort((a, b) => a.price - b.price);
 
-    const mejor = ofertas[1] ?? ofertas[0];
+    // 👉 Seleccionar TERCER vendedor (o segundo, o primero)
+    const mejor = ofertas[2] ?? ofertas[1] ?? ofertas[0];
+
     if (!mejor) {
-      return { statusCode: 404, body: "Sin ofertas disponibles" };
+      return {
+        statusCode: 404,
+        body: "Sin ofertas disponibles",
+      };
     }
 
+    // 👉 Devolver solo el precio crudo
     return {
       statusCode: 200,
       headers: {
@@ -52,7 +64,6 @@ export async function handler(event, context) {
       },
       body: mejor.price.toString(),
     };
-
   } catch (err) {
     return {
       statusCode: 500,
