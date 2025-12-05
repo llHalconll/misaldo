@@ -1,6 +1,5 @@
 // funciones/binance-rate.js
 export async function handler(event, context) {
-  // Solo permitir método GET
   if (event.httpMethod !== "GET") {
     return {
       statusCode: 405,
@@ -18,7 +17,6 @@ export async function handler(event, context) {
       payTypes: ["SpecificBank"],
     };
 
-    // Llamar a Binance
     const resp = await fetch("https://p2p.binance.com/bapi/c2c/v2/friendly/c2c/adv/search", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -31,22 +29,21 @@ export async function handler(event, context) {
 
     const data = await resp.json();
 
-    // Filtrar ofertas válidas (al menos 15 USDT)
+    // 👉 Cambiado: solo ofertas donde max <= 20 USDT
     const ofertas = (data.data || [])
       .map(o => ({
         price: parseFloat(o.adv.price),
         min: parseFloat(o.adv.minSingleTransQuantity),
         max: parseFloat(o.adv.maxSingleTransQuantity),
       }))
-      .filter(o => o.max >= 15 && o.min <= 100)
+      .filter(o => o.max <= 20)       // 👈 NUEVA REGLA
       .sort((a, b) => a.price - b.price);
 
-    const mejor = ofertas[1] ?? ofertas[2];
+    const mejor = ofertas[1] ?? ofertas[0];
     if (!mejor) {
       return { statusCode: 404, body: "Sin ofertas disponibles" };
     }
 
-    // Solo devolver el número puro
     return {
       statusCode: 200,
       headers: {
@@ -55,6 +52,7 @@ export async function handler(event, context) {
       },
       body: mejor.price.toString(),
     };
+
   } catch (err) {
     return {
       statusCode: 500,
@@ -62,3 +60,4 @@ export async function handler(event, context) {
       body: "Error interno: " + err.message,
     };
   }
+}
