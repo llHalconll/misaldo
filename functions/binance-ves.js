@@ -1,6 +1,6 @@
 // funciones/binance-rate.js
 export async function handler(event, context) {
-  // Solo permitir GET
+  // Solo permitir método GET
   if (event.httpMethod !== "GET") {
     return {
       statusCode: 405,
@@ -11,40 +11,34 @@ export async function handler(event, context) {
   try {
     const body = {
       asset: "USDT",
-      fiat: "VES",
+      fiat: "COP",
       tradeType: "BUY",
       page: 1,
       rows: 20,
-      payTypes: ["Pago Movil"],
+      payTypes: ["Nequi"],
     };
 
     // Llamar a Binance
-    const resp = await fetch(
-      "https://p2p.binance.com/bapi/c2c/v2/friendly/c2c/adv/search",
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      }
-    );
+    const resp = await fetch("https://p2p.binance.com/bapi/c2c/v2/friendly/c2c/adv/search", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
 
     if (!resp.ok) {
-      return {
-        statusCode: resp.status,
-        body: "Error al obtener datos de Binance",
-      };
+      return { statusCode: resp.status, body: "Error al obtener datos de Binance" };
     }
 
     const data = await resp.json();
 
-    // Filtrar ofertas
+    // Filtrar ofertas válidas
     const ofertas = (data.data || [])
-      .map((o) => ({
+      .map(o => ({
         price: parseFloat(o.adv.price),
         min: parseFloat(o.adv.minSingleTransQuantity),
         max: parseFloat(o.adv.maxSingleTransQuantity),
       }))
-      .filter((o) => o.max >= 15 && o.min <= 100)
+      .filter(o => o.max >= 15 && o.min <= 100)
       .sort((a, b) => a.price - b.price);
 
     const mejor = ofertas[1] ?? ofertas[0];
@@ -52,17 +46,17 @@ export async function handler(event, context) {
       return { statusCode: 404, body: "Sin ofertas disponibles" };
     }
 
-    // ⭐ Ajustes solicitados
-    const precioAjustado = mejor.price + 100; // tu ajuste original
-    const precioFinal = precioAjustado + 2;   // ➕ sumar 2 puntos más
+    // ✅ Sumar 100 COP a la tasa
+    const precioAjustado = mejor.price + 100;
 
+    // Devolver la tasa ajustada como número puro
     return {
       statusCode: 200,
       headers: {
         "Content-Type": "text/plain",
         "Access-Control-Allow-Origin": "*",
       },
-      body: precioFinal.toFixed(2),
+      body: precioAjustado.toFixed(2), // dos decimales
     };
   } catch (err) {
     return {
