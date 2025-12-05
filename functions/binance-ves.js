@@ -16,9 +16,6 @@ export async function handler(event, context) {
       tradeType: "BUY",
       page: 1,
       rows: 20,
-      // --- CAMBIO CLAVE 2: Método de pago para Venezuela ---
-      // Puedes usar "Transferencia Bancaria" o "Pago Móvil"
-      payTypes: ["Transferencia Bancaria"],
     };
 
     // Llamar a Binance
