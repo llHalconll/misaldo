@@ -1,6 +1,6 @@
 // funciones/binance-rate.js
 export async function handler(event, context) {
-  // Solo permitir método GET
+  // Solo permitir GET
   if (event.httpMethod !== "GET") {
     return {
       statusCode: 405,
@@ -15,45 +15,54 @@ export async function handler(event, context) {
       tradeType: "BUY",
       page: 1,
       rows: 20,
-      payTypes: ["SpecificBank"],
+      payTypes: ["Pago Movil"],
     };
 
     // Llamar a Binance
-    const resp = await fetch("https://p2p.binance.com/bapi/c2c/v2/friendly/c2c/adv/search", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
+    const resp = await fetch(
+      "https://p2p.binance.com/bapi/c2c/v2/friendly/c2c/adv/search",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      }
+    );
 
     if (!resp.ok) {
-      return { statusCode: resp.status, body: "Error al obtener datos de Binance" };
+      return {
+        statusCode: resp.status,
+        body: "Error al obtener datos de Binance",
+      };
     }
 
     const data = await resp.json();
 
-    // Filtrar ofertas válidas (al menos 15 USDT)
+    // Filtrar ofertas
     const ofertas = (data.data || [])
-      .map(o => ({
+      .map((o) => ({
         price: parseFloat(o.adv.price),
         min: parseFloat(o.adv.minSingleTransQuantity),
         max: parseFloat(o.adv.maxSingleTransQuantity),
       }))
-      .filter(o => o.max >= 15 && o.min <= 100)
+      .filter((o) => o.max >= 15 && o.min <= 100)
       .sort((a, b) => a.price - b.price);
 
-    const mejor = ofertas[1] ?? ofertas[2];
+    const mejor = ofertas[1] ?? ofertas[0];
     if (!mejor) {
       return { statusCode: 404, body: "Sin ofertas disponibles" };
     }
 
-    // Solo devolver el número puro
+    // ⭐ Ajustes solicitados
+    const precioAjustado = mejor.price + 100; // tu ajuste original
+    const precioFinal = precioAjustado + 2;   // ➕ sumar 2 puntos más
+
     return {
       statusCode: 200,
       headers: {
         "Content-Type": "text/plain",
         "Access-Control-Allow-Origin": "*",
       },
-      body: mejor.price.toString(),
+      body: precioFinal.toFixed(2),
     };
   } catch (err) {
     return {
@@ -62,3 +71,4 @@ export async function handler(event, context) {
       body: "Error interno: " + err.message,
     };
   }
+}
