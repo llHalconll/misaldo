@@ -1,29 +1,26 @@
 // funciones/binance-rate.js
 export async function handler(event, context) {
-  // Solo permitir método GET
   if (event.httpMethod !== "GET") {
-    return {
-      statusCode: 405,
-      body: "Método no permitido",
-    };
+    return { statusCode: 405, body: "Método no permitido" };
   }
 
   try {
     const body = {
       asset: "USDT",
-      // --- CAMBIO CLAVE 1: Moneda fiat a VES ---
       fiat: "VES",
       tradeType: "BUY",
       page: 1,
       rows: 20,
     };
 
-    // Llamar a Binance
-    const resp = await fetch("https://p2p.binance.com/bapi/c2c/v2/friendly/c2c/adv/search", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
+    const resp = await fetch(
+      "https://p2p.binance.com/bapi/c2c/v2/friendly/c2c/adv/search",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      }
+    );
 
     if (!resp.ok) {
       return { statusCode: resp.status, body: "Error al obtener datos de Binance" };
@@ -31,39 +28,37 @@ export async function handler(event, context) {
 
     const data = await resp.json();
 
-    // Filtrar ofertas válidas (la lógica de filtrado por cantidad de USDT sigue siendo útil)
     const ofertas = (data.data || [])
       .map(o => ({
         price: parseFloat(o.adv.price),
         min: parseFloat(o.adv.minSingleTransQuantity),
         max: parseFloat(o.adv.maxSingleTransQuantity),
       }))
-      .filter(o => o.max >= 15 && o.min <= 100)
+      .filter(o => o.max >= 15 && o.min <= 100)   // puedes ajustar este rango
       .sort((a, b) => a.price - b.price);
 
-    const mejor = ofertas[1] ?? ofertas[0];
-    if (!mejor) {
+    // --- toma 3ro; si no existe, 2do; si no existe, 1ro ---
+    const vendedor = ofertas[2] ?? ofertas[1] ?? ofertas[0];
+
+    if (!vendedor) {
       return { statusCode: 404, body: "Sin ofertas disponibles" };
     }
 
-    // --- CAMBIO CLAVE 3: Ajuste del precio ---
-    // Usamos el precio directamente. Si quieres añadir tu margen, hazlo aquí.
-    // Ejemplo: const precioAjustado = mejor.price + 1.50; // para añadir 1.50 VES
-    const precioFinal = mejor.price;
+    // --- suma +2 puntos a la tasa ---
+    const precioFinal = vendedor.price + 2;
 
-    // Devolver la tasa ajustada como número puro
     return {
       statusCode: 200,
       headers: {
         "Content-Type": "text/plain",
         "Access-Control-Allow-Origin": "*",
       },
-      body: precioFinal.toFixed(2), // dos decimales
+      body: precioFinal.toFixed(2),
     };
+
   } catch (err) {
     return {
       statusCode: 500,
-      headers: { "Content-Type": "text/plain" },
       body: "Error interno: " + err.message,
     };
   }
